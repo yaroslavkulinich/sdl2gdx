@@ -1,0 +1,150 @@
+plugins {
+    id 'java-library'
+    id 'maven-publish'
+}
+
+sourceCompatibility = '1.8'
+targetCompatibility = '1.8'
+
+sourceSets {
+    main {
+        java.srcDirs = ['src/']
+        resources.srcDirs = [
+                'res/',
+                'libs/linux32', 'libs/linux64',
+                'libs/macosx32', 'libs/macosx64',
+                'libs/windows32', 'libs/windows64'
+        ]
+    }
+    test {
+        java.srcDirs = []
+        resources.srcDirs = []
+    }
+}
+
+repositories {
+    mavenCentral()
+    maven { url "https://oss.sonatype.org/content/repositories/snapshots/" }
+    maven { url "https://oss.sonatype.org/content/repositories/releases/" }
+}
+
+dependencies {
+    implementation 'com.badlogicgames.gdx:gdx-jnigen:1.9.10'
+    api 'com.badlogicgames.gdx:gdx:1.9.9'
+    api 'com.badlogicgames.gdx:gdx-controllers:1.9.9'
+}
+
+tasks.register('deleteJniFolder', Delete) {
+    delete 'jni'
+    delete 'docs'
+}
+
+tasks.named('clean') {
+    dependsOn tasks.named('deleteJniFolder')
+}
+
+tasks.register('runTester', JavaExec) {
+    main = 'uk.co.electronstudio.sdl2gdx.tests.SDLTest'
+    classpath = sourceSets.main.runtimeClasspath
+    standardInput = System.in
+}
+
+tasks.register('linuxNatives', JavaExec) {
+    main = 'uk.co.electronstudio.sdl2gdx.NativesBuild'
+    args = ['build-linux', 'system-SDL2']
+    classpath = sourceSets.main.runtimeClasspath
+    standardInput = System.in
+}
+
+tasks.register('windowsNatives', JavaExec) {
+    main = 'uk.co.electronstudio.sdl2gdx.NativesBuild'
+    args = ['build-windows', 'system-SDL2']
+    classpath = sourceSets.main.runtimeClasspath
+    standardInput = System.in
+}
+
+tasks.register('OSXNatives', JavaExec) {
+    main = 'uk.co.electronstudio.sdl2gdx.NativesBuild'
+    args = ['build-OSX', 'system-SDL2']
+    classpath = sourceSets.main.runtimeClasspath
+    standardInput = System.in
+}
+
+tasks.register('allNatives', JavaExec) {
+    main = 'uk.co.electronstudio.sdl2gdx.NativesBuild'
+    args = ['build-linux', 'build-windows', 'build-OSX']
+    classpath = sourceSets.main.runtimeClasspath
+    standardInput = System.in
+}
+
+tasks.register('uberjar', Jar) {
+    dependsOn tasks.named('classes')
+    from sourceSets.main.output
+    manifest {
+        attributes 'Main-Class': 'uk.co.electronstudio.sdl2gdx.tests.SDLTest'
+    }
+}
+
+tasks.register('sourcesJar', Jar) {
+    dependsOn tasks.named('classes')
+    archiveClassifier.set('sources')
+    from sourceSets.main.allSource
+}
+
+tasks.named('javadoc', Javadoc) {
+    exclude 'com/badlogic/**'
+    destinationDir = file('docs')
+    options.overview = file('overview.html')
+}
+
+tasks.register('javadocJar', Jar) {
+    dependsOn tasks.named('javadoc')
+    archiveClassifier.set('javadoc')
+    from tasks.named('javadoc').get().destinationDir
+}
+
+publishing {
+    publications {
+        mavenJava(MavenPublication) {
+            from components.java
+            artifact tasks.named('sourcesJar').get()
+            artifact tasks.named('javadocJar').get()
+            groupId = 'uk.co.electronstudio.sdl2gdx'
+            artifactId = 'sdl2gdx'
+            version = '1.0.4'
+
+            pom {
+                name.set('sdl2gdx')
+                description.set('LibGDX extension library')
+                url.set('https://github.com/electronstudio/sdl2gdx')
+                licenses {
+                    license {
+                        name.set('GPLv3 with Classpath Exception')
+                        url.set('https://www.gnu.org/software/classpath/license.html')
+                        distribution.set('repo')
+                    }
+                }
+                developers {
+                    developer {
+                        id.set('electronstudio')
+                        name.set('Electron Studio')
+                        email.set('support@electronstudio.co.uk')
+                    }
+                }
+                scm {
+                    url.set('https://github.com/electronstudio/')
+                }
+            }
+        }
+    }
+    repositories {
+        maven {
+            name = 'MavenCentral'
+            url = uri('https://repo.maven.apache.org/maven2/')
+        }
+    }
+}
+
+tasks.named('publish') {
+    dependsOn tasks.named('uberjar')
+}
