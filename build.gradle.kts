@@ -44,7 +44,9 @@ val nativePresentSourceset by sourceSets.creating {
 }
 
 dependencies {
-    //implementation("com.badlogicgames.gdx:gdx-jnigen:1.9.10")
+    implementation("com.badlogicgames.gdx:gdx-jnigen:1.9.10")
+    api("com.badlogicgames.gdx:gdx:1.9.9")
+    api("com.badlogicgames.gdx:gdx-controllers:1.9.9")
 }
 
 val deleteJniFolder by tasks.registering(Delete::class) {
